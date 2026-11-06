@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: fitzone_db
+    restart: always
+    environment:
+      POSTGRES_USER: fitzone_user
+      POSTGRES_PASSWORD: fitzone_password
+      POSTGRES_DB: fitzone_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: fitzone_app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://fitzone_user:fitzone_password@db:5432/fitzone_db
+      - ENVIRONMENT=development
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+
+  tests:
+    build: .
+    container_name: fitzone_tests
+    environment:
+      # Las pruebas usarán SQLite en memoria para máxima velocidad y aislamiento
+      - DATABASE_URL=sqlite:///./test.db
+      - ENVIRONMENT=testing
+    command: pytest tests/ --cov=src --cov-report=term-missing
+    volumes:
+      - .:/app
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
