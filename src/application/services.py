@@ -1,7 +1,18 @@
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime
-from src.domain.value_objects import Actor, ReservaId, ClaseId, SocioId
+from src.domain.value_objects import (
+    Actor,
+    ReservaId,
+    ClaseId,
+    SocioId,
+    Capacidad,
+    Horario,
+    VigenciaDeMembresia,
+    PlanId,
+    EstadoDeReserva,
+)
+from src.domain.entities import ClaseGrupal, Membresia, Reserva
 from src.domain.specifications import MembresiaVigenteSpec
 from src.application.dtos import (
     ComandoReservar,
@@ -9,9 +20,11 @@ from src.application.dtos import (
     ComandoRegistrarAsistencia,
     ReservaDTO,
     ClaseDisponibleDTO,
+    DetalleClaseDTO,
+    MembresiaDTO,
 )
 from src.application.unit_of_work import UnitOfWork
-from src.infrastructure.orm import ClaseGrupalORM
+from src.infrastructure.orm import ClaseGrupalORM, ReservaORM, MembresiaORM
 
 
 # ==========================================
@@ -21,8 +34,23 @@ class ServicioDeReservas:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
+    def _reconstruir_agregado_clase(self, clase_orm: ClaseGrupalORM) -> ClaseGrupal:
+        """Reconstruye el Agregado ClaseGrupal con sus reservas existentes para proteger invariantes."""
+        clase = ClaseGrupal(
+            id=ClaseId(clase_orm.id),
+            nombre=clase_orm.nombre,
+            horario=Horario(clase_orm.inicio, clase_orm.fin),
+            capacidad=Capacidad(clase_orm.capacidad_maxima),
+        )
+        for r in clase_orm.reservas:
+            reserva_entidad = Reserva(id=ReservaId(r.id), socio_id=SocioId(r.socio_id))
+            reserva_entidad.estado = r.estado
+            reserva_entidad.fecha_creacion = r.fecha_creacion
+            clase._reservas.append(reserva_entidad)
+        return clase
+
     def reservar_clase(self, comando: ComandoReservar) -> str:
-        """CU-01: Proceso para apartar un lugar en una clase."""
+        """CU-01: Proceso para apartar un lugar en una clase (BR-01, BR-05, BR-06)."""
         with self.uow:
             # 1. Traer los archiveros
             clase_orm = self.uow.clases.obtener_por_id(comando.clase_id)
@@ -35,22 +63,8 @@ class ServicioDeReservas:
             if not membresia_orm:
                 raise ValueError("El socio no tiene ninguna membresía registrada.")
 
-            # 2. Traducir ORM a Entidades Puras (simplificado para el ejemplo)
-            # En un entorno completo, aquí usamos un "Mapper" para reconstruir el Agregado ClaseGrupal.
-            from src.domain.entities import ClaseGrupal, Membresia
-            from src.domain.value_objects import (
-                Capacidad,
-                Horario,
-                VigenciaDeMembresia,
-                PlanId,
-            )
-
-            clase = ClaseGrupal(
-                id=ClaseId(clase_orm.id),
-                nombre=clase_orm.nombre,
-                horario=Horario(clase_orm.inicio, clase_orm.fin),
-                capacidad=Capacidad(clase_orm.capacidad_maxima),
-            )
+            # 2. Traducir ORM a Entidades Puras
+            clase = self._reconstruir_agregado_clase(clase_orm)
 
             membresia = Membresia(
                 id=membresia_orm.id,
@@ -69,7 +83,7 @@ class ServicioDeReservas:
                     "La membresía del socio no está vigente o está suspendida."
                 )
 
-            # 4. Ejecutar la acción en el Dominio
+            # 4. Ejecutar la acción en el Dominio (protege cupo BR-05 y duplicidad)
             actor = Actor(id=comando.actor_id, rol=comando.actor_rol)
             nuevo_id_reserva = ReservaId(str(uuid.uuid4()))
 
@@ -79,20 +93,74 @@ class ServicioDeReservas:
                 reserva_id=nuevo_id_reserva,
             )
 
-            # 5. Guardar en Base de Datos (Mapeo inverso)
-            from src.infrastructure.orm import ReservaORM
-
+            # 5. Guardar en Base de Datos
             nueva_reserva_orm = ReservaORM(
-                id=nuevo_id_reserva, clase_id=clase.id, socio_id=comando.socio_id
+                id=nuevo_id_reserva,
+                clase_id=clase.id,
+                socio_id=comando.socio_id,
+                estado=EstadoDeReserva.ACTIVA,
+                fecha_creacion=datetime.now(),
             )
             self.uow.db.add(nueva_reserva_orm)
             self.uow.confirmar(agregado=clase)
 
             return nuevo_id_reserva
 
-    def cancelar_reserva(self, comando: ComandoCancelar):
-        """CU-03: Cancela la reserva y detona eventos para la lista de espera."""
-        pass  # La lógica es similar a reservar: buscar, llamar a clase.cancelar_reserva() y guardar.
+    def cancelar_reserva(self, comando: ComandoCancelar) -> None:
+        """CU-03: Cancela la reserva activa, libera cupo y detona eventos para la lista de espera."""
+        with self.uow:
+            clase_orm = self.uow.clases.obtener_por_id(comando.clase_id)
+            if not clase_orm:
+                raise ValueError("La clase solicitada no existe.")
+
+            clase = self._reconstruir_agregado_clase(clase_orm)
+            actor = Actor(id=comando.actor_id, rol=comando.actor_rol)
+
+            # Dominio procesa la cancelación y emite ReservaCancelada
+            clase.cancelar_reserva(socio_id=SocioId(comando.socio_id), actor=actor)
+
+            # Reflejar cambio de estado en la persistencia ORM
+            reserva_orm = next(
+                (
+                    r
+                    for r in clase_orm.reservas
+                    if r.socio_id == comando.socio_id
+                    and r.estado == EstadoDeReserva.ACTIVA
+                ),
+                None,
+            )
+            if reserva_orm:
+                reserva_orm.estado = EstadoDeReserva.CANCELADA
+
+            self.uow.confirmar(agregado=clase)
+
+    def registrar_asistencia(self, comando: ComandoRegistrarAsistencia) -> None:
+        """CU-04: Recepción confirma que el socio llegó y entró a la sesión (BR-02)."""
+        with self.uow:
+            clase_orm = self.uow.clases.obtener_por_id(comando.clase_id)
+            if not clase_orm:
+                raise ValueError("La clase solicitada no existe.")
+
+            clase = self._reconstruir_agregado_clase(clase_orm)
+            actor = Actor(id=comando.actor_id, rol=comando.actor_rol)
+
+            # El dominio valida que actor.rol sea RECEPCION y que haya reserva activa
+            clase.registrar_asistencia(socio_id=SocioId(comando.socio_id), actor=actor)
+
+            # Reflejar estado ASISTIDA en persistencia
+            reserva_orm = next(
+                (
+                    r
+                    for r in clase_orm.reservas
+                    if r.socio_id == comando.socio_id
+                    and r.estado == EstadoDeReserva.ACTIVA
+                ),
+                None,
+            )
+            if reserva_orm:
+                reserva_orm.estado = EstadoDeReserva.ASISTIDA
+
+            self.uow.confirmar(agregado=clase)
 
 
 class ServicioDeCierreDeClase:
@@ -100,8 +168,30 @@ class ServicioDeCierreDeClase:
         self.uow = uow
 
     def registrar_no_shows(self, clase_id: str):
-        """CU-05: El sistema barre la clase al terminar y castiga a los ausentes."""
-        pass  # Busca la clase, llama a clase.procesar_cierre_de_clase() y guarda.
+        """CU-05: El sistema barre la clase al terminar y penaliza a los ausentes."""
+        with self.uow:
+            clase_orm = self.uow.clases.obtener_por_id(clase_id)
+            if not clase_orm:
+                raise ValueError("La clase solicitada no existe.")
+
+            clase = ClaseGrupal(
+                id=ClaseId(clase_orm.id),
+                nombre=clase_orm.nombre,
+                horario=Horario(clase_orm.inicio, clase_orm.fin),
+                capacidad=Capacidad(clase_orm.capacidad_maxima),
+            )
+            for r in clase_orm.reservas:
+                res = Reserva(id=ReservaId(r.id), socio_id=SocioId(r.socio_id))
+                res.estado = r.estado
+                clase._reservas.append(res)
+
+            clase.procesar_cierre_de_clase()
+
+            for r in clase_orm.reservas:
+                if r.estado == EstadoDeReserva.ACTIVA:
+                    r.estado = EstadoDeReserva.NO_SHOW
+
+            self.uow.confirmar(agregado=clase)
 
 
 # ==========================================
@@ -109,8 +199,7 @@ class ServicioDeCierreDeClase:
 # ==========================================
 class ServicioDeConsultas:
     """
-    Bypass del Dominio: Para solo leer, consultamos directo a la base de datos
-    para que sea ultra rápido y no carguemos reglas innecesarias en memoria.
+    Bypass del Dominio: Para consultas de lectura rápida sin cargar lógica transaccional.
     """
 
     def __init__(self, db_session):
@@ -120,9 +209,8 @@ class ServicioDeConsultas:
         clases_orm = self.db.query(ClaseGrupalORM).all()
         resultado = []
         for c in clases_orm:
-            # Cálculo rápido de lugares
             lugares_ocupados = len(
-                [r for r in c.reservas if r.estado.value == "ACTIVA"]
+                [r for r in c.reservas if r.estado == EstadoDeReserva.ACTIVA]
             )
             resultado.append(
                 ClaseDisponibleDTO(
@@ -134,3 +222,64 @@ class ServicioDeConsultas:
                 )
             )
         return resultado
+
+    def consultar_detalle_clase(self, clase_id: str) -> Optional[DetalleClaseDTO]:
+        c = (
+            self.db.query(ClaseGrupalORM)
+            .filter(ClaseGrupalORM.id == clase_id)
+            .first()
+        )
+        if not c:
+            return None
+
+        lugares_ocupados = len(
+            [r for r in c.reservas if r.estado == EstadoDeReserva.ACTIVA]
+        )
+        return DetalleClaseDTO(
+            id=c.id,
+            nombre=c.nombre,
+            horario_inicio=c.inicio,
+            horario_fin=c.fin,
+            capacidad_maxima=c.capacidad_maxima,
+            lugares_ocupados=lugares_ocupados,
+            lugares_disponibles=c.capacidad_maxima - lugares_ocupados,
+        )
+
+    def consultar_reservas_de_socio(self, socio_id: str) -> List[ReservaDTO]:
+        reservas_orm = (
+            self.db.query(ReservaORM)
+            .filter(ReservaORM.socio_id == socio_id)
+            .order_by(ReservaORM.fecha_creacion.desc())
+            .all()
+        )
+        return [
+            ReservaDTO(
+                id=r.id,
+                clase_id=r.clase_id,
+                socio_id=r.socio_id,
+                estado=r.estado,
+                fecha_creacion=r.fecha_creacion,
+            )
+            for r in reservas_orm
+        ]
+
+    def consultar_membresia_socio(self, socio_id: str) -> Optional[MembresiaDTO]:
+        m = (
+            self.db.query(MembresiaORM)
+            .filter(MembresiaORM.socio_id == socio_id)
+            .first()
+        )
+        if not m:
+            return None
+
+        ahora = datetime.now()
+        vigente = not m.suspendida and (m.inicio_vigencia <= ahora <= m.fin_vigencia)
+        return MembresiaDTO(
+            id=m.id,
+            socio_id=m.socio_id,
+            plan_id=m.plan_id,
+            inicio_vigencia=m.inicio_vigencia,
+            fin_vigencia=m.fin_vigencia,
+            vigente=vigente,
+            suspendida=m.suspendida,
+        )

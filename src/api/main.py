@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -15,15 +16,16 @@ async def lifespan(app: FastAPI):
     1. Asegura que las tablas existan en la base de datos (SQLite / PostgreSQL).
     2. Si la base de datos está vacía, puebla automáticamente los datos base de FitZone.
     """
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        if db.query(ClaseGrupalORM).count() == 0:
-            cargar_datos_iniciales(db)
-    except Exception as e:
-        print(f"Aviso durante la inicialización de datos: {e}")
-    finally:
-        db.close()
+    if os.getenv("ENVIRONMENT") != "testing":
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            if db.query(ClaseGrupalORM).count() == 0:
+                cargar_datos_iniciales(db)
+        except Exception as e:
+            print(f"Aviso durante la inicialización de datos: {e}")
+        finally:
+            db.close()
     yield
 
 

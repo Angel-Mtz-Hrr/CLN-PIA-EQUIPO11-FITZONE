@@ -91,12 +91,12 @@ class ComandoCancelar(BaseModel):
     )
     actor_id: str = Field(
         ...,
-        description="ID del usuario que solicita la cancelación (socio o personal).",
+        description="ID del usuario que solicita la cancelación (socio o recepción).",
         examples=["FIT-C001"],
     )
     actor_rol: Rol = Field(
         ...,
-        description="Rol con el que se solicita la cancelación.",
+        description="Rol del solicitante para validar autorización.",
         examples=[Rol.SOCIO],
     )
 
@@ -127,12 +127,12 @@ class ComandoRegistrarAsistencia(BaseModel):
     )
     actor_id: str = Field(
         ...,
-        description="ID del empleado o instructor que verifica el acceso.",
+        description="ID del empleado de recepción o instructor que valida en puerta.",
         examples=["FIT-R001"],
     )
     actor_rol: Rol = Field(
         ...,
-        description="Rol del operador (generalmente Recepción o Instructor).",
+        description="Rol del operador (debe ser Recepción según BR-02).",
         examples=[Rol.RECEPCION],
     )
 
@@ -173,6 +173,44 @@ class RespuestaReserva(BaseModel):
                 {
                     "mensaje": "¡Tu lugar está confirmado!",
                     "reserva_id": "a81bc81b-dead-4e5d-abff-90865d1e13b1",
+                }
+            ]
+        }
+    )
+
+
+class RespuestaAccionDTO(BaseModel):
+    """Respuesta para transiciones de estado como cancelaciones o asistencias."""
+
+    mensaje: str = Field(
+        ...,
+        description="Descripción del resultado de la acción ejecutada.",
+        examples=["Reserva cancelada exitosamente."],
+    )
+    clase_id: str = Field(
+        ...,
+        description="ID de la clase afectada.",
+        examples=["FIT-P001"],
+    )
+    socio_id: str = Field(
+        ...,
+        description="ID del socio involucrado.",
+        examples=["FIT-C001"],
+    )
+    nuevo_estado: EstadoDeReserva = Field(
+        ...,
+        description="Estado resultante de la reserva en el ciclo de vida.",
+        examples=[EstadoDeReserva.CANCELADA],
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "mensaje": "Reserva cancelada exitosamente.",
+                    "clase_id": "FIT-P001",
+                    "socio_id": "FIT-C001",
+                    "nuevo_estado": "CANCELADA",
                 }
             ]
         }
@@ -257,6 +295,118 @@ class ClaseDisponibleDTO(BaseModel):
                     "horario_inicio": "2026-11-10T07:00:00",
                     "horario_fin": "2026-11-10T08:00:00",
                     "lugares_disponibles": 8,
+                }
+            ]
+        }
+    )
+
+
+class DetalleClaseDTO(BaseModel):
+    """Información completa de aforo y horario de una clase grupal específica."""
+
+    id: str = Field(
+        ...,
+        description="Identificador único de la clase.",
+        examples=["FIT-P001"],
+    )
+    nombre: str = Field(
+        ...,
+        description="Nombre descriptivo de la disciplina.",
+        examples=["Clase Mensual 01"],
+    )
+    horario_inicio: datetime = Field(
+        ...,
+        description="Inicio programado de la clase.",
+        examples=["2026-11-06T10:00:00"],
+    )
+    horario_fin: datetime = Field(
+        ...,
+        description="Fin programado de la clase.",
+        examples=["2026-11-06T11:00:00"],
+    )
+    capacidad_maxima: int = Field(
+        ...,
+        description="Capacidad o aforo total autorizado (BR-05).",
+        examples=[15],
+    )
+    lugares_ocupados: int = Field(
+        ...,
+        description="Cantidad actual de reservaciones activas.",
+        examples=[2],
+    )
+    lugares_disponibles: int = Field(
+        ...,
+        description="Lugares disponibles para reservar en este momento.",
+        examples=[13],
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": "FIT-P001",
+                    "nombre": "Clase Mensual 01",
+                    "horario_inicio": "2026-11-06T10:00:00",
+                    "horario_fin": "2026-11-06T11:00:00",
+                    "capacidad_maxima": 15,
+                    "lugares_ocupados": 2,
+                    "lugares_disponibles": 13,
+                }
+            ]
+        }
+    )
+
+
+class MembresiaDTO(BaseModel):
+    """Estado y vigencia de la suscripción de un socio (BR-06 y BR-07)."""
+
+    id: str = Field(
+        ...,
+        description="Código de membresía del socio.",
+        examples=["MEM-FIT-C001"],
+    )
+    socio_id: str = Field(
+        ...,
+        description="Identificador del socio titular.",
+        examples=["FIT-C001"],
+    )
+    plan_id: str = Field(
+        ...,
+        description="Identificador del plan contratado.",
+        examples=["PLAN-001"],
+    )
+    inicio_vigencia: datetime = Field(
+        ...,
+        description="Fecha y hora de inicio de vigencia.",
+        examples=["2026-10-01T00:00:00"],
+    )
+    fin_vigencia: datetime = Field(
+        ...,
+        description="Fecha y hora de vencimiento.",
+        examples=["2027-10-01T00:00:00"],
+    )
+    vigente: bool = Field(
+        ...,
+        description="Indica si la membresía está vigente al día de hoy.",
+        examples=[True],
+    )
+    suspendida: bool = Field(
+        ...,
+        description="Indica si la cuenta se encuentra suspendida.",
+        examples=[False],
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": "MEM-FIT-C001",
+                    "socio_id": "FIT-C001",
+                    "plan_id": "PLAN-001",
+                    "inicio_vigencia": "2026-10-01T00:00:00",
+                    "fin_vigencia": "2027-10-01T00:00:00",
+                    "vigente": True,
+                    "suspendida": False,
                 }
             ]
         }
