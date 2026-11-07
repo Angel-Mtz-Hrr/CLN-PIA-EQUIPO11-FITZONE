@@ -18,8 +18,9 @@ AvisoId = NewType("AvisoId", str)
 
 # ==========================================
 # ENUMERACIONES (Máquinas de Estado y Categorías)
+# Heredan de 'str' para que Swagger UI los muestre en menús desplegables
 # ==========================================
-class Rol(Enum):
+class Rol(str, Enum):
     SOCIO = "Socio"
     RECEPCION = "Recepción"
     INSTRUCTOR = "Instructor"
@@ -27,7 +28,7 @@ class Rol(Enum):
     SISTEMA = "Sistema"
 
 
-class EstadoDeReserva(Enum):
+class EstadoDeReserva(str, Enum):
     SOLICITADA = "SOLICITADA"
     ACTIVA = "ACTIVA"
     CANCELADA = "CANCELADA"
@@ -35,21 +36,21 @@ class EstadoDeReserva(Enum):
     NO_SHOW = "NO_SHOW"
 
 
-class EstadoEntradaListaEspera(Enum):
+class EstadoEntradaListaEspera(str, Enum):
     ESPERANDO = "Esperando"
     OFERTADA = "Ofertada"
     CONFIRMADA = "Confirmada"
     EXPIRADA = "Expirada"
 
 
-class MotivoRechazo(Enum):
+class MotivoRechazo(str, Enum):
     MEMBRESIA_NO_VIGENTE = "MEMBRESIA_NO_VIGENTE"
     CLASE_FUERA_DEL_PLAN = "CLASE_FUERA_DEL_PLAN"
     CUPO_LLENO = "CUPO_LLENO"
     RESERVA_NO_ENCONTRADA = "RESERVA_NO_ENCONTRADA"
 
 
-class TipoRegistroHistorial(Enum):
+class TipoRegistroHistorial(str, Enum):
     ASISTENCIA = "Asistencia"
     CANCELACION = "Cancelación"
     NO_SHOW = "No-Show"

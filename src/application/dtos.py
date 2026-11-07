@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from src.domain.value_objects import Rol, EstadoDeReserva
@@ -12,6 +12,18 @@ class ComandoReservar(BaseModel):
     socio_id: str
     actor_id: str
     actor_rol: Rol
+
+    # Esto le dice a Swagger exactamente qué poner de ejemplo en la cajita
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "clase_id": "FIT-P001",
+                "socio_id": "FIT-C001",
+                "actor_id": "FIT-C001",
+                "actor_rol": "Socio",
+            }
+        }
+    )
 
 
 class ComandoCancelar(BaseModel):
@@ -31,6 +43,22 @@ class ComandoRegistrarAsistencia(BaseModel):
 # ==========================================
 # QUERIES / RESPUESTAS (Formularios de salida para leer datos)
 # ==========================================
+class RespuestaReserva(BaseModel):
+    """El comprobante que el sistema le devuelve al usuario al reservar."""
+
+    mensaje: str
+    reserva_id: str
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "mensaje": "¡Tu lugar está confirmado!",
+                "reserva_id": "b1b2b3-...",
+            }
+        }
+    )
+
+
 class ReservaDTO(BaseModel):
     id: str
     clase_id: str

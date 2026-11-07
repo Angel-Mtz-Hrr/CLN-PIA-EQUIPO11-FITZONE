@@ -6,7 +6,7 @@ from typing import List
 from src.infrastructure.database import get_db
 from src.application.unit_of_work import UnitOfWork
 from src.application.services import ServicioDeReservas, ServicioDeConsultas
-from src.application.dtos import ComandoReservar, ClaseDisponibleDTO
+from src.application.dtos import ComandoReservar, ClaseDisponibleDTO, RespuestaReserva
 
 router = APIRouter(tags=["Gimnasio FitZone"])
 
@@ -41,7 +41,12 @@ def consultar_calendario(
     return servicio.consultar_calendario_disponible()
 
 
-@router.post("/reservas", status_code=201, summary="Apartar un lugar en una clase")
+@router.post(
+    "/reservas",
+    response_model=RespuestaReserva,
+    status_code=201,
+    summary="Apartar un lugar en una clase",
+)
 def apartar_lugar(
     comando: ComandoReservar,
     servicio: ServicioDeReservas = Depends(get_servicio_reservas),
@@ -51,4 +56,6 @@ def apartar_lugar(
     Si rompe alguna regla (ej. clase llena, membresía vencida), el sistema lo detendrá.
     """
     reserva_id = servicio.reservar_clase(comando)
-    return {"mensaje": "¡Tu lugar está confirmado!", "reserva_id": reserva_id}
+
+    # Retornamos el diccionario que coincide con RespuestaReserva
+    return {"mensaje": "¡Tu lugar está confirmado!", "reserva_id": str(reserva_id)}
