@@ -1,0 +1,424 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API FitZone — Gestión de Gimnasio",
+    "description": "\nSistema RESTful de gestión de membresías, reservaciones de clases y control de acceso para el gimnasio **FitZone**.\n\n### Arquitectura y Reglas del Dominio:\n* **Invariante de Cupo (BR-05)**: Validación estricta para evitar sobrecupos en clases grupales.\n* **Vigencia de Membresías (BR-06)**: Comprobación de suscripciones vigentes mediante Specifications.\n* **Control de Acceso por Roles (BR-01 a BR-04)**: Autorización granular para Socios, Recepción e Instructores.\n* **Manejo de Errores Empáticos**: Respuestas semánticas (HTTP 400 y 403) ante cualquier infracción de reglas de negocio.\n    ",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/calendario": {
+      "get": {
+        "tags": [
+          "Gimnasio FitZone"
+        ],
+        "summary": "Consultar el horario de clases y cupos disponibles",
+        "description": "Retorna el horario general de clases grupales y cuántos lugares quedan disponibles.\nPermite al socio o a recepción verificar disponibilidad antes de solicitar una reserva.",
+        "operationId": "consultar_calendario_api_v1_calendario_get",
+        "responses": {
+          "200": {
+            "description": "Lista completa de clases programadas con cupos disponibles en tiempo real.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClaseDisponibleDTO"
+                  },
+                  "type": "array",
+                  "title": "Response Consultar Calendario Api V1 Calendario Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reservas": {
+      "post": {
+        "tags": [
+          "Gimnasio FitZone"
+        ],
+        "summary": "Apartar un lugar en una clase grupal",
+        "description": "Recibe la solicitud de reserva y aplica las reglas de negocio estrictas:\n- **Existencia**: La clase y la membresía deben existir en el sistema.\n- **Capacidad (BR-05)**: La clase debe contar con cupo disponible mayor a cero.\n- **Vigencia (BR-06)**: La membresía del socio debe estar activa y dentro de su rango de fechas.\n- **Autorización (BR-01 a BR-04)**: El actor debe poseer un rol válido para solicitar la reserva.",
+        "operationId": "apartar_lugar_api_v1_reservas_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComandoReservar",
+                "description": "Formulario de reserva que incluye la clase, el socio y el actor que solicita la operación."
+              },
+              "examples": {
+                "reserva_socio": {
+                  "summary": "Reserva directa realizada por el Socio",
+                  "description": "El socio FIT-C001 reserva por sí mismo un lugar en la clase FIT-P001.",
+                  "value": {
+                    "clase_id": "FIT-P001",
+                    "socio_id": "FIT-C001",
+                    "actor_id": "FIT-C001",
+                    "actor_rol": "Socio"
+                  }
+                },
+                "reserva_recepcion": {
+                  "summary": "Reserva gestionada por el personal de Recepción",
+                  "description": "El recepcionista FIT-R001 aparta un lugar para el socio FIT-C002.",
+                  "value": {
+                    "clase_id": "FIT-P001",
+                    "socio_id": "FIT-C002",
+                    "actor_id": "FIT-R001",
+                    "actor_rol": "Recepción"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Confirmación exitosa con identificador UUID de la reserva generada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaReserva"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fallo por regla de negocio (ej. cupo lleno, membresía vencida, horario solapado).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuestaDTO"
+                },
+                "examples": {
+                  "cupo_lleno": {
+                    "summary": "Clase sin cupo disponible",
+                    "value": {
+                      "error": "Regla de Negocio",
+                      "mensaje": "La clase no cuenta con cupo disponible.",
+                      "solucion": "Intenta anotarte en la lista de espera o elige otro horario."
+                    }
+                  },
+                  "membresia_vencida": {
+                    "summary": "Membresía no vigente o suspendida",
+                    "value": {
+                      "error": "Regla de Negocio",
+                      "mensaje": "La membresía del socio no está vigente o se encuentra suspendida.",
+                      "solucion": "Acude a recepción para renovar tu suscripción."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El actor no tiene los permisos requeridos para ejecutar la acción.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuestaDTO"
+                },
+                "example": {
+                  "error": "Permiso Denegado",
+                  "mensaje": "El usuario no cuenta con rol autorizado para realizar esta reserva.",
+                  "solucion": "Verifica que el actor posea rol 'Socio' o 'Recepción'."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso solicitado (clase o socio) no fue encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuestaDTO"
+                },
+                "example": {
+                  "error": "Regla de Negocio",
+                  "mensaje": "La clase solicitada no existe.",
+                  "solucion": "Verifica el código de clase consultando el calendario."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClaseDisponibleDTO": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Identificador único de la clase programada.",
+            "examples": [
+              "FIT-P001"
+            ]
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre",
+            "description": "Nombre descriptivo de la disciplina o clase deportiva.",
+            "examples": [
+              "CrossFit Matutino"
+            ]
+          },
+          "horario_inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Horario Inicio",
+            "description": "Fecha y hora de inicio de la clase (ISO 8601).",
+            "examples": [
+              "2026-11-10T07:00:00"
+            ]
+          },
+          "horario_fin": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Horario Fin",
+            "description": "Fecha y hora de finalización de la clase (ISO 8601).",
+            "examples": [
+              "2026-11-10T08:00:00"
+            ]
+          },
+          "lugares_disponibles": {
+            "type": "integer",
+            "title": "Lugares Disponibles",
+            "description": "Número de cupos restantes disponibles para reserva inmediata.",
+            "examples": [
+              8
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nombre",
+          "horario_inicio",
+          "horario_fin",
+          "lugares_disponibles"
+        ],
+        "title": "ClaseDisponibleDTO",
+        "examples": [
+          {
+            "horario_fin": "2026-11-10T08:00:00",
+            "horario_inicio": "2026-11-10T07:00:00",
+            "id": "FIT-P001",
+            "lugares_disponibles": 8,
+            "nombre": "CrossFit Matutino"
+          }
+        ]
+      },
+      "ComandoReservar": {
+        "properties": {
+          "clase_id": {
+            "type": "string",
+            "title": "Clase Id",
+            "description": "Identificador único de la clase deportiva programada (ej. FIT-P001).",
+            "examples": [
+              "FIT-P001"
+            ]
+          },
+          "socio_id": {
+            "type": "string",
+            "title": "Socio Id",
+            "description": "Identificador del socio titular que solicita el lugar (ej. FIT-C001).",
+            "examples": [
+              "FIT-C001"
+            ]
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id",
+            "description": "ID del usuario autenticado que efectúa la solicitud (socio o personal).",
+            "examples": [
+              "FIT-C001"
+            ]
+          },
+          "actor_rol": {
+            "$ref": "#/components/schemas/Rol",
+            "description": "Rol con el que se ejecuta la transacción en el sistema (BR-01 a BR-04).",
+            "examples": [
+              "Socio"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "clase_id",
+          "socio_id",
+          "actor_id",
+          "actor_rol"
+        ],
+        "title": "ComandoReservar",
+        "examples": [
+          {
+            "actor_id": "FIT-C001",
+            "actor_rol": "Socio",
+            "clase_id": "FIT-P001",
+            "socio_id": "FIT-C001"
+          }
+        ]
+      },
+      "ErrorRespuestaDTO": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error",
+            "description": "Categoría o tipo de error producido en la capa de negocio.",
+            "examples": [
+              "Regla de Negocio"
+            ]
+          },
+          "mensaje": {
+            "type": "string",
+            "title": "Mensaje",
+            "description": "Explicación detallada de la regla infringida.",
+            "examples": [
+              "La clase no cuenta con cupo disponible."
+            ]
+          },
+          "solucion": {
+            "type": "string",
+            "title": "Solucion",
+            "description": "Acción sugerida para mitigar o corregir el error.",
+            "examples": [
+              "Selecciona otro horario o inscríbete en lista de espera."
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "error",
+          "mensaje",
+          "solucion"
+        ],
+        "title": "ErrorRespuestaDTO",
+        "description": "Esquema devuelto cuando falla una regla de negocio o una comprobación de permisos.",
+        "examples": [
+          {
+            "error": "Regla de Negocio",
+            "mensaje": "La membresía del socio no está vigente o se encuentra suspendida.",
+            "solucion": "Renueva tu plan en recepción antes de reservar."
+          }
+        ]
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "RespuestaReserva": {
+        "properties": {
+          "mensaje": {
+            "type": "string",
+            "title": "Mensaje",
+            "description": "Mensaje confirmatorio para el usuario.",
+            "examples": [
+              "¡Tu lugar está confirmado!"
+            ]
+          },
+          "reserva_id": {
+            "type": "string",
+            "title": "Reserva Id",
+            "description": "Identificador único (UUID) de la reservación creada.",
+            "examples": [
+              "a81bc81b-dead-4e5d-abff-90865d1e13b1"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "mensaje",
+          "reserva_id"
+        ],
+        "title": "RespuestaReserva",
+        "description": "Comprobante que el sistema devuelve al usuario al reservar exitosamente.",
+        "examples": [
+          {
+            "mensaje": "¡Tu lugar está confirmado!",
+            "reserva_id": "a81bc81b-dead-4e5d-abff-90865d1e13b1"
+          }
+        ]
+      },
+      "Rol": {
+        "type": "string",
+        "enum": [
+          "Socio",
+          "Recepción",
+          "Instructor",
+          "Administrador",
+          "Sistema"
+        ],
+        "title": "Rol"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Gimnasio FitZone",
+      "description": "Operaciones transaccionales y de consulta para clases, membresías y reservaciones."
+    }
+  ]
+}

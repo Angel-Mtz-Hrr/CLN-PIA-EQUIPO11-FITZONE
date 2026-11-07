@@ -2,10 +2,34 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from .routes import router
 
+tags_metadata = [
+    {
+        "name": "Gimnasio FitZone",
+        "description": "Operaciones transaccionales y de consulta para clases, membresías y reservaciones.",
+    },
+]
+
 app = FastAPI(
-    title="API FitZone",
-    description="Sistema de gestión de membresías, reservaciones y accesos para el gimnasio FitZone.",
+    title="API FitZone — Gestión de Gimnasio",
+    description="""
+Sistema RESTful de gestión de membresías, reservaciones de clases y control de acceso para el gimnasio **FitZone**.
+
+### Arquitectura y Reglas del Dominio:
+* **Invariante de Cupo (BR-05)**: Validación estricta para evitar sobrecupos en clases grupales.
+* **Vigencia de Membresías (BR-06)**: Comprobación de suscripciones vigentes mediante Specifications.
+* **Control de Acceso por Roles (BR-01 a BR-04)**: Autorización granular para Socios, Recepción e Instructores.
+* **Manejo de Errores Empáticos**: Respuestas semánticas (HTTP 400 y 403) ante cualquier infracción de reglas de negocio.
+    """,
     version="1.0.0",
+    openapi_tags=tags_metadata,
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": 1,
+        "defaultModelExpandDepth": 2,
+        "displayRequestDuration": True,
+        "filter": True,
+        "showExtensions": True,
+        "syntaxHighlight.theme": "monokai",
+    },
 )
 
 
