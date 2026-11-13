@@ -179,7 +179,9 @@ $("dialogo-si").addEventListener("click", (evento) => {
     campo.setAttribute("aria-invalid", "true");
     avisar("Escribe un ID de socio válido.", "error", "Ejemplo: FIT-C001");
     campo.focus();
+    return;
   }
+  $("dialogo").close("si");
 });
 
 // ---------------------------------------------------------

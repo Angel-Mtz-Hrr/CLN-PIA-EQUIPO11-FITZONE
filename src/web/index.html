@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="styles.css?v=2.0">
+  <link rel="stylesheet" href="styles.css?v=2.2">
 </head>
 
 <body>
@@ -38,7 +38,14 @@
     <span id="usuario-actual" class="usuario"></span>
 
     <!-- Botón para salir. "hidden" = oculto hasta que alguien entre. -->
-    <button id="btn-salir" class="btn btn-secundario btn-chico" hidden>Salir</button>
+    <button id="btn-salir" class="btn btn-logout btn-chico" hidden title="Cerrar sesión">
+      <svg class="icono-mini" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
+      <span>Salir</span>
+    </button>
   </header>
 
   <!-- <main> es el contenido principal. Dentro hay varias "vistas" (pantallas). -->
@@ -181,6 +188,6 @@
     </form>
   </dialog>
 
-  <script src="app.js?v=2.0"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>

@@ -248,6 +248,19 @@ main {
   border-color: var(--rojo);
 }
 
+.btn-logout {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.btn-logout:hover {
+  background: var(--rojo);
+  color: #ffffff;
+  border-color: var(--rojo);
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.4);
+}
+
 .btn-exito {
   background: rgba(16, 185, 129, 0.2);
   color: #6ee7b7;
