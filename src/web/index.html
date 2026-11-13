@@ -1,169 +1,315 @@
 <!DOCTYPE html>
-<!-- Le dice al navegador: "esto es un documento HTML moderno (HTML5)". -->
 <html lang="es">
-<!-- lang="es" ayuda a los lectores de pantalla a pronunciar en español. -->
-
 <head>
-  <!-- Codificación de caracteres: permite acentos y la ñ sin errores. -->
   <meta charset="UTF-8">
-  <!-- Hace que la página se vea bien en celulares (no aparece "chiquita"). -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Texto que aparece en la pestaña del navegador. -->
-  <title>FitZone · Recepción y Socios</title>
-  <!-- Conecta la hoja de estilos (colores, tamaños, etc.). -->
+  <title>FitZone · Plataforma de Gestión y Reservas</title>
+  
+  <!-- Tipografía Profesional: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
   <!-- ===================================================== -->
-  <!-- BARRA SUPERIOR: siempre visible, dice quién está usando -->
+  <!-- FONDO ATMOSFÉRICO INMERSIVO (Gimnasio con Blur + Gradiente) -->
   <!-- ===================================================== -->
-  <header class="barra">
-    <!-- Logo/nombre del sistema -->
-    <span class="logo">🏋️ FitZone</span>
-    <!-- Aquí JavaScript escribirá "Recepción · FIT-R001". Empieza vacío. -->
-    <span id="usuario-actual" class="usuario"></span>
-    <!-- Botón para salir. "hidden" = oculto hasta que alguien entre. -->
-    <button id="btn-salir" class="btn btn-secundario btn-chico" hidden>Salir</button>
+  <div class="fondo-atmosfera" aria-hidden="true">
+    <div class="fondo-imagen"></div>
+    <div class="fondo-gradiente"></div>
+    <div class="luces-ambientales">
+      <div class="luz luz-violeta"></div>
+      <div class="luz luz-cyan"></div>
+      <div class="luz luz-indigo"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================== -->
+  <!-- BARRA DE NAVEGACIÓN SUPERIOR GLASSMORPHISM             -->
+  <!-- ===================================================== -->
+  <header class="barra-navegacion">
+    <div class="contenedor-barra">
+      
+      <!-- LOGO DE MARCA PROFESIONAL -->
+      <a href="#" class="marca-fitzone" onclick="mostrarVista('menu'); return false;">
+        <div class="logo-contenedor">
+          <img src="assets/logo-icon.png" alt="FitZone Icono" class="logo-simbolo">
+        </div>
+        <span class="logo-texto">
+          FIT<span class="logo-acento">ZONE</span>
+        </span>
+      </a>
+
+      <!-- ESTADO DE SESIÓN ACTUAL -->
+      <div class="barra-acciones">
+        <div id="usuario-badge" class="usuario-pill" hidden>
+          <span class="usuario-indicador"></span>
+          <span id="usuario-actual" class="usuario-texto"></span>
+        </div>
+        
+        <button id="btn-salir" class="btn btn-logout" hidden title="Cerrar sesión">
+          <svg class="icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span class="texto-btn-salir">Salir</span>
+        </button>
+      </div>
+
+    </div>
   </header>
 
-  <!-- <main> es el contenido principal. Dentro hay varias "vistas" (pantallas). -->
-  <!-- Solo una vista se muestra a la vez; JavaScript decide cuál. -->
-  <main>
+  <!-- ===================================================== -->
+  <!-- CONTENEDOR PRINCIPAL DE PANTALLAS                     -->
+  <!-- ===================================================== -->
+  <main class="contenedor-principal">
 
-    <!-- ===================================================== -->
-    <!-- PANTALLA A: INICIO ("¿Quién eres?")                    -->
-    <!-- ===================================================== -->
+    <!-- --------------------------------------------------- -->
+    <!-- PANTALLA 1: INICIO ("Acceso al Sistema")             -->
+    <!-- --------------------------------------------------- -->
     <section id="vista-inicio" class="vista">
-      <h1>¡Bienvenido a FitZone!</h1>
-      <p class="subtitulo">Paso 1: toca quién eres.</p>
+      <div class="panel-hero glass-panel">
+        <div class="hero-cabecera">
+          <span class="badge-acento">Portal de Alto Rendimiento 2026</span>
+          <h1 class="titulo-hero">Bienvenido a <span class="texto-gradiente">FitZone</span></h1>
+          <p class="subtitulo">Selecciona tu perfil de usuario para ingresar a la plataforma.</p>
+        </div>
 
-      <!-- Dos botones gigantes para elegir el rol. -->
-      <!-- data-rol guarda el valor EXACTO que espera la API ("Recepción" o "Socio"). -->
-      <div class="rejilla-2">
-        <button class="tarjeta-boton" data-rol="Recepción" aria-pressed="false">
-          <span class="icono">🧑‍💼</span>
-          <span>Soy RECEPCIÓN</span>
-        </button>
-        <button class="tarjeta-boton" data-rol="Socio" aria-pressed="false">
-          <span class="icono">🙋</span>
-          <span>Soy SOCIO</span>
-        </button>
+        <!-- SELECTOR DE ROL -->
+        <div class="selector-roles">
+          <button class="tarjeta-rol" data-rol="Recepción" aria-pressed="false" type="button">
+            <div class="icono-rol-envoltorio rol-recepcion">
+              <svg class="icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <div class="info-rol">
+              <span class="rol-nombre">Recepción</span>
+              <span class="rol-descripcion">Control de aforo, accesos y reservas</span>
+            </div>
+            <div class="radio-indicador"></div>
+          </button>
+
+          <button class="tarjeta-rol" data-rol="Socio" aria-pressed="false" type="button">
+            <div class="icono-rol-envoltorio rol-socio">
+              <svg class="icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div class="info-rol">
+              <span class="rol-nombre">Socio</span>
+              <span class="rol-descripcion">Reserva de clases e historial personal</span>
+            </div>
+            <div class="radio-indicador"></div>
+          </button>
+        </div>
+
+        <!-- FORMULARIO DE ID -->
+        <form id="form-entrar" class="form-login" novalidate>
+          <div class="campo-grupo">
+            <label for="campo-id" class="campo-etiqueta">
+              <span>Identificador de Credencial</span>
+              <span class="etiqueta-hint">Formato FIT-XXXX</span>
+            </label>
+            <div class="input-icono-envoltorio">
+              <svg class="input-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <input id="campo-id" type="text" class="input-moderno"
+                     placeholder="Ej. FIT-R001 o FIT-C001"
+                     autocomplete="off" autocapitalize="characters">
+            </div>
+            <small class="pista">Ingresa el código asignado a tu membresía o puesto.</small>
+          </div>
+
+          <button type="submit" class="btn btn-gradiente btn-ancho">
+            <span>Ingresar a la Plataforma</span>
+            <svg class="icono-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </form>
       </div>
-
-      <!-- Formulario para escribir el ID. -->
-      <!-- novalidate: nosotros mostramos los errores con mensajes amables, no el navegador. -->
-      <form id="form-entrar" class="caja" novalidate>
-        <!-- "for" conecta la etiqueta con el campo: tocar el texto enfoca la caja. -->
-        <label for="campo-id">Paso 2: escribe tu ID</label>
-        <!-- autocomplete="off" evita sugerencias raras del navegador. -->
-        <input id="campo-id" type="text" placeholder="Ejemplo: FIT-R001 o FIT-C001"
-               autocomplete="off" autocapitalize="characters">
-        <!-- Pista pequeña debajo de la caja. -->
-        <small class="pista">Tu ID viene en tu credencial. Empieza con "FIT-".</small>
-        <!-- type="submit" = al presionarlo (o Enter) se envía el formulario. -->
-        <button type="submit" class="btn btn-principal">ENTRAR ➜</button>
-      </form>
     </section>
 
-    <!-- ===================================================== -->
-    <!-- PANTALLA B: MENÚ PRINCIPAL                             -->
-    <!-- ===================================================== -->
+    <!-- --------------------------------------------------- -->
+    <!-- PANTALLA 2: MENÚ PRINCIPAL                             -->
+    <!-- --------------------------------------------------- -->
     <section id="vista-menu" class="vista" hidden>
-      <h1>¿Qué quieres hacer?</h1>
-      <!-- data-ir indica a qué pantalla lleva cada botón. -->
-      <div class="rejilla-2">
-        <button class="tarjeta-boton" data-ir="clases">
-          <span class="icono">📅</span>
-          <span>Ver clases y RESERVAR</span>
+      <div class="cabecera-seccion">
+        <span class="badge-acento">Panel de Control</span>
+        <h1 class="titulo-seccion">¿Qué operación deseas realizar?</h1>
+        <p class="subtitulo">Selecciona una de las opciones del módulo de gestión.</p>
+      </div>
+
+      <div class="rejilla-menu">
+        <button class="tarjeta-menu glass-panel" data-ir="clases" type="button">
+          <div class="icono-menu-envoltorio menu-clases">
+            <svg class="icono-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div class="info-menu">
+            <h3>Cartelera y Reservas</h3>
+            <p>Consulta cupos en tiempo real y aparta lugares en clases grupales.</p>
+          </div>
+          <div class="menu-accion">
+            <span>Acceder</span>
+            <svg class="icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
         </button>
-        <button class="tarjeta-boton" data-ir="socio">
-          <span class="icono">🔍</span>
-          <!-- JavaScript cambia este texto según el rol (Buscar socio / Mis reservas). -->
-          <span id="texto-boton-socio">Buscar SOCIO</span>
+
+        <button class="tarjeta-menu glass-panel" data-ir="socio" type="button">
+          <div class="icono-menu-envoltorio menu-socio">
+            <svg class="icono-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="info-menu">
+            <h3 id="texto-boton-socio">Gestión de Socios</h3>
+            <p id="descripcion-boton-socio">Verifica membresías, asistencias en puerta y cancelaciones.</p>
+          </div>
+          <div class="menu-accion">
+            <span>Acceder</span>
+            <svg class="icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
         </button>
       </div>
-      <!-- Explicación corta para recepción: dónde están cancelar y asistencia. -->
-      <p id="ayuda-menu" class="pista centrado"></p>
+
+      <div class="panel-info-ayuda glass-panel">
+        <svg class="icono-ayuda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <p id="ayuda-menu" class="pista"></p>
+      </div>
     </section>
 
-    <!-- ===================================================== -->
-    <!-- PANTALLA C: CLASES (tarjetas con semáforo)             -->
-    <!-- ===================================================== -->
+    <!-- --------------------------------------------------- -->
+    <!-- PANTALLA 3: CARTELERA DE CLASES CON SEMÁFORO          -->
+    <!-- --------------------------------------------------- -->
     <section id="vista-clases" class="vista" hidden>
-      <!-- data-ir="menu" = este botón regresa al menú. -->
-      <button class="btn btn-secundario" data-ir="menu">⬅ Volver al menú</button>
-      <h1>Clases de hoy</h1>
-      <!-- Leyenda del semáforo, para que nadie tenga que adivinar los colores. -->
-      <p class="leyenda">
-        <!-- Cada par (punto + texto) va junto para que no se separe en celular -->
-        <span class="item-leyenda"><span class="punto verde"></span> Hay lugar</span>
-        <span class="item-leyenda"><span class="punto ambar"></span> Quedan pocos</span>
-        <span class="item-leyenda"><span class="punto rojo"></span> Llena</span>
-      </p>
-      <!-- Aquí JavaScript dibujará una tarjeta por cada clase. -->
-      <div id="lista-clases" class="rejilla-tarjetas">
-        <p class="cargando">Cargando clases…</p>
+      <div class="barra-herramientas">
+        <button class="btn btn-vidrio" data-ir="menu" type="button">
+          <svg class="icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          <span>Volver al Menú</span>
+        </button>
+
+        <div class="leyenda-semaforo glass-panel">
+          <span class="item-leyenda"><span class="indicador-dot verde"></span> Disponible</span>
+          <span class="item-leyenda"><span class="indicador-dot ambar"></span> Pocos cupos</span>
+          <span class="item-leyenda"><span class="indicador-dot rojo"></span> Agotado</span>
+        </div>
+      </div>
+
+      <div class="cabecera-seccion">
+        <h1 class="titulo-seccion">Horario de Sesiones Programadas</h1>
+        <p class="subtitulo">Disponibilidad de aforo monitoreada en tiempo real bajo reglas del dominio.</p>
+      </div>
+
+      <div id="lista-clases" class="rejilla-clases">
+        <div class="cargando-estado glass-panel">
+          <div class="spinner"></div>
+          <p>Sincronizando calendario con el servidor…</p>
+        </div>
       </div>
     </section>
 
-    <!-- ===================================================== -->
-    <!-- PANTALLA D: FICHA DEL SOCIO                            -->
-    <!-- ===================================================== -->
+    <!-- --------------------------------------------------- -->
+    <!-- PANTALLA 4: FICHA DEL SOCIO Y MEMBRESÍA               -->
+    <!-- --------------------------------------------------- -->
     <section id="vista-socio" class="vista" hidden>
-      <button class="btn btn-secundario" data-ir="menu">⬅ Volver al menú</button>
-      <h1 id="titulo-socio">Buscar socio</h1>
+      <div class="barra-herramientas">
+        <button class="btn btn-vidrio" data-ir="menu" type="button">
+          <svg class="icono-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          <span>Volver al Menú</span>
+        </button>
+      </div>
 
-      <!-- Buscador: solo lo ve Recepción (el socio ve directo su ficha). -->
-      <form id="form-buscar" class="caja fila" novalidate>
-        <label for="campo-buscar" class="solo-lector">ID del socio</label>
-        <input id="campo-buscar" type="text" placeholder="ID del socio, ej. FIT-C001"
-               autocomplete="off" autocapitalize="characters">
-        <button type="submit" class="btn btn-principal">BUSCAR</button>
+      <div class="cabecera-seccion">
+        <h1 id="titulo-socio" class="titulo-seccion">Ficha de Membresía</h1>
+        <p class="subtitulo">Estatus contractual, vigencia y control de accesos.</p>
+      </div>
+
+      <!-- BUSCADOR (SOLO VISIBLE PARA RECEPCIÓN) -->
+      <form id="form-buscar" class="form-busqueda glass-panel" novalidate>
+        <div class="campo-busqueda-grupo">
+          <svg class="icono-busqueda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input id="campo-buscar" type="text" class="input-moderno"
+                 placeholder="Ingresa el ID del socio (ej. FIT-C001)"
+                 autocomplete="off" autocapitalize="characters">
+          <button type="submit" class="btn btn-gradiente btn-compacto">
+            <span>Buscar Socio</span>
+          </button>
+        </div>
       </form>
 
-      <!-- Resultado: tarjeta de membresía + historial. Empieza oculto. -->
-      <div id="ficha-socio" hidden>
-        <!-- Tarjeta grande de color con el estado de la membresía. -->
-        <div id="tarjeta-membresia" class="membresia"></div>
-        <h2>Reservas</h2>
-        <!-- Lista de reservas con botones Cancelar / Marcar asistencia. -->
-        <div id="lista-reservas"></div>
+      <!-- FICHA RESULTADO -->
+      <div id="ficha-socio" class="ficha-contenedor" hidden>
+        <!-- TARJETA DE MEMBRESÍA EN RELIEVE -->
+        <div id="tarjeta-membresia" class="tarjeta-membresia-moderna glass-panel"></div>
+
+        <div class="seccion-reservas-titulo">
+          <h2>Historial de Reservaciones</h2>
+          <span class="pista">Gestión de asistencia y cancelaciones</span>
+        </div>
+
+        <div id="lista-reservas" class="lista-reservas-grid"></div>
       </div>
     </section>
 
   </main>
 
   <!-- ===================================================== -->
-  <!-- AVISOS (mensajes verdes/rojos que aparecen abajo)      -->
+  <!-- SISTEMA DE AVISOS Y NOTIFICACIONES FLOTANTES           -->
   <!-- ===================================================== -->
-  <!-- aria-live="polite": los lectores de pantalla leen el aviso en voz alta. -->
-  <div id="avisos" aria-live="polite"></div>
+  <div id="avisos" class="contenedor-avisos" aria-live="polite"></div>
 
   <!-- ===================================================== -->
-  <!-- VENTANA DE CONFIRMACIÓN ("¿Estás seguro?")             -->
+  <!-- MODAL DE CONFIRMACIÓN GLASSMORPHISM                   -->
   <!-- ===================================================== -->
-  <!-- <dialog> es una ventana emergente nativa de HTML. -->
-  <dialog id="dialogo">
-    <form method="dialog" id="form-dialogo">
-      <h2 id="dialogo-titulo">¿Confirmas?</h2>
-      <p id="dialogo-texto"></p>
-      <!-- Este campo solo aparece cuando Recepción reserva a nombre de un socio. -->
-      <div id="dialogo-campo" hidden>
-        <label for="dialogo-socio">ID del socio</label>
-        <input id="dialogo-socio" type="text" placeholder="Ejemplo: FIT-C001"
+  <dialog id="dialogo" class="dialogo-moderno">
+    <div class="dialogo-cuerpo glass-panel">
+      <div class="dialogo-icono-circulo">
+        <svg class="icono-dialogo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      </div>
+      <h2 id="dialogo-titulo" class="dialogo-titulo">Confirmar Transacción</h2>
+      <p id="dialogo-texto" class="dialogo-mensaje"></p>
+
+      <div id="dialogo-campo" class="dialogo-input-envoltorio" hidden>
+        <label for="dialogo-socio" class="campo-etiqueta">ID del Socio Beneficiario</label>
+        <input id="dialogo-socio" type="text" class="input-moderno"
+               placeholder="Ejemplo: FIT-C001"
                autocomplete="off" autocapitalize="characters">
       </div>
-      <div class="fila">
-        <!-- value="no" / value="si" nos dice qué botón se presionó. -->
-        <button value="no" class="btn btn-secundario">No, regresar</button>
-        <button value="si" id="dialogo-si" class="btn btn-principal">Sí, confirmar</button>
+
+      <div class="dialogo-acciones">
+        <button value="no" class="btn btn-vidrio" type="button" onclick="$('dialogo').close('no')">
+          Cancelar
+        </button>
+        <button value="si" id="dialogo-si" class="btn btn-gradiente" type="button">
+          Confirmar
+        </button>
       </div>
-    </form>
+    </div>
   </dialog>
 
-  <!-- El "cerebro" se carga al final, cuando todo el HTML ya existe. -->
+  <!-- CONTROLADOR PRINCIPAL JAVASCRIPT -->
   <script src="app.js"></script>
 </body>
 </html>
