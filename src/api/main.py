@@ -1,7 +1,9 @@
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from pathlib import Path  # Para construir rutas de carpetas sin importar el sistema operativo
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles  # Sirve archivos HTML/CSS/JS tal cual
 from .routes import router
 
 from src.infrastructure.database import engine, Base, SessionLocal
@@ -98,3 +100,20 @@ async def permission_error_handler(request: Request, exc: PermissionError):
 
 # Conectamos nuestras rutas a la aplicación principal
 app.include_router(router, prefix="/api/v1")
+
+
+# ==========================================
+# INTERFAZ GRÁFICA (carpeta src/web)
+# ==========================================
+# Carpeta donde viven index.html, styles.css y app.js
+CARPETA_WEB = Path(__file__).resolve().parent.parent / "web"
+
+# "Montamos" la carpeta: todo lo que esté ahí se sirve en http://.../app/
+# html=True hace que /app/ entregue index.html automáticamente.
+app.mount("/app", StaticFiles(directory=CARPETA_WEB, html=True), name="interfaz")
+
+
+@app.get("/", include_in_schema=False)
+def ir_a_la_interfaz():
+    """Si alguien abre la raíz del sitio, lo mandamos directo a la interfaz."""
+    return RedirectResponse(url="/app/")

@@ -1,0 +1,13 @@
+﻿# Entornos virtuales (cada quien crea el suyo)
+.venv/
+venv/
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+# Base de datos local (se regenera sola desde los CSV)
+*.db
+# Variables de entorno con datos privados
+.env
+# Reportes de cobertura
+.coverage
+htmlcov/

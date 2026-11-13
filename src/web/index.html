@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<!-- Le dice al navegador: "esto es un documento HTML moderno (HTML5)". -->
+<html lang="es">
+<!-- lang="es" ayuda a los lectores de pantalla a pronunciar en español. -->
+
+<head>
+  <!-- Codificación de caracteres: permite acentos y la ñ sin errores. -->
+  <meta charset="UTF-8">
+  <!-- Hace que la página se vea bien en celulares (no aparece "chiquita"). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Texto que aparece en la pestaña del navegador. -->
+  <title>FitZone · Recepción y Socios</title>
+  <!-- Conecta la hoja de estilos (colores, tamaños, etc.). -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+  <!-- ===================================================== -->
+  <!-- BARRA SUPERIOR: siempre visible, dice quién está usando -->
+  <!-- ===================================================== -->
+  <header class="barra">
+    <!-- Logo/nombre del sistema -->
+    <span class="logo">🏋️ FitZone</span>
+    <!-- Aquí JavaScript escribirá "Recepción · FIT-R001". Empieza vacío. -->
+    <span id="usuario-actual" class="usuario"></span>
+    <!-- Botón para salir. "hidden" = oculto hasta que alguien entre. -->
+    <button id="btn-salir" class="btn btn-secundario btn-chico" hidden>Salir</button>
+  </header>
+
+  <!-- <main> es el contenido principal. Dentro hay varias "vistas" (pantallas). -->
+  <!-- Solo una vista se muestra a la vez; JavaScript decide cuál. -->
+  <main>
+
+    <!-- ===================================================== -->
+    <!-- PANTALLA A: INICIO ("¿Quién eres?")                    -->
+    <!-- ===================================================== -->
+    <section id="vista-inicio" class="vista">
+      <h1>¡Bienvenido a FitZone!</h1>
+      <p class="subtitulo">Paso 1: toca quién eres.</p>
+
+      <!-- Dos botones gigantes para elegir el rol. -->
+      <!-- data-rol guarda el valor EXACTO que espera la API ("Recepción" o "Socio"). -->
+      <div class="rejilla-2">
+        <button class="tarjeta-boton" data-rol="Recepción" aria-pressed="false">
+          <span class="icono">🧑‍💼</span>
+          <span>Soy RECEPCIÓN</span>
+        </button>
+        <button class="tarjeta-boton" data-rol="Socio" aria-pressed="false">
+          <span class="icono">🙋</span>
+          <span>Soy SOCIO</span>
+        </button>
+      </div>
+
+      <!-- Formulario para escribir el ID. -->
+      <!-- novalidate: nosotros mostramos los errores con mensajes amables, no el navegador. -->
+      <form id="form-entrar" class="caja" novalidate>
+        <!-- "for" conecta la etiqueta con el campo: tocar el texto enfoca la caja. -->
+        <label for="campo-id">Paso 2: escribe tu ID</label>
+        <!-- autocomplete="off" evita sugerencias raras del navegador. -->
+        <input id="campo-id" type="text" placeholder="Ejemplo: FIT-R001 o FIT-C001"
+               autocomplete="off" autocapitalize="characters">
+        <!-- Pista pequeña debajo de la caja. -->
+        <small class="pista">Tu ID viene en tu credencial. Empieza con "FIT-".</small>
+        <!-- type="submit" = al presionarlo (o Enter) se envía el formulario. -->
+        <button type="submit" class="btn btn-principal">ENTRAR ➜</button>
+      </form>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- PANTALLA B: MENÚ PRINCIPAL                             -->
+    <!-- ===================================================== -->
+    <section id="vista-menu" class="vista" hidden>
+      <h1>¿Qué quieres hacer?</h1>
+      <!-- data-ir indica a qué pantalla lleva cada botón. -->
+      <div class="rejilla-2">
+        <button class="tarjeta-boton" data-ir="clases">
+          <span class="icono">📅</span>
+          <span>Ver clases y RESERVAR</span>
+        </button>
+        <button class="tarjeta-boton" data-ir="socio">
+          <span class="icono">🔍</span>
+          <!-- JavaScript cambia este texto según el rol (Buscar socio / Mis reservas). -->
+          <span id="texto-boton-socio">Buscar SOCIO</span>
+        </button>
+      </div>
+      <!-- Explicación corta para recepción: dónde están cancelar y asistencia. -->
+      <p id="ayuda-menu" class="pista centrado"></p>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- PANTALLA C: CLASES (tarjetas con semáforo)             -->
+    <!-- ===================================================== -->
+    <section id="vista-clases" class="vista" hidden>
+      <!-- data-ir="menu" = este botón regresa al menú. -->
+      <button class="btn btn-secundario" data-ir="menu">⬅ Volver al menú</button>
+      <h1>Clases de hoy</h1>
+      <!-- Leyenda del semáforo, para que nadie tenga que adivinar los colores. -->
+      <p class="leyenda">
+        <!-- Cada par (punto + texto) va junto para que no se separe en celular -->
+        <span class="item-leyenda"><span class="punto verde"></span> Hay lugar</span>
+        <span class="item-leyenda"><span class="punto ambar"></span> Quedan pocos</span>
+        <span class="item-leyenda"><span class="punto rojo"></span> Llena</span>
+      </p>
+      <!-- Aquí JavaScript dibujará una tarjeta por cada clase. -->
+      <div id="lista-clases" class="rejilla-tarjetas">
+        <p class="cargando">Cargando clases…</p>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- PANTALLA D: FICHA DEL SOCIO                            -->
+    <!-- ===================================================== -->
+    <section id="vista-socio" class="vista" hidden>
+      <button class="btn btn-secundario" data-ir="menu">⬅ Volver al menú</button>
+      <h1 id="titulo-socio">Buscar socio</h1>
+
+      <!-- Buscador: solo lo ve Recepción (el socio ve directo su ficha). -->
+      <form id="form-buscar" class="caja fila" novalidate>
+        <label for="campo-buscar" class="solo-lector">ID del socio</label>
+        <input id="campo-buscar" type="text" placeholder="ID del socio, ej. FIT-C001"
+               autocomplete="off" autocapitalize="characters">
+        <button type="submit" class="btn btn-principal">BUSCAR</button>
+      </form>
+
+      <!-- Resultado: tarjeta de membresía + historial. Empieza oculto. -->
+      <div id="ficha-socio" hidden>
+        <!-- Tarjeta grande de color con el estado de la membresía. -->
+        <div id="tarjeta-membresia" class="membresia"></div>
+        <h2>Reservas</h2>
+        <!-- Lista de reservas con botones Cancelar / Marcar asistencia. -->
+        <div id="lista-reservas"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================== -->
+  <!-- AVISOS (mensajes verdes/rojos que aparecen abajo)      -->
+  <!-- ===================================================== -->
+  <!-- aria-live="polite": los lectores de pantalla leen el aviso en voz alta. -->
+  <div id="avisos" aria-live="polite"></div>
+
+  <!-- ===================================================== -->
+  <!-- VENTANA DE CONFIRMACIÓN ("¿Estás seguro?")             -->
+  <!-- ===================================================== -->
+  <!-- <dialog> es una ventana emergente nativa de HTML. -->
+  <dialog id="dialogo">
+    <form method="dialog" id="form-dialogo">
+      <h2 id="dialogo-titulo">¿Confirmas?</h2>
+      <p id="dialogo-texto"></p>
+      <!-- Este campo solo aparece cuando Recepción reserva a nombre de un socio. -->
+      <div id="dialogo-campo" hidden>
+        <label for="dialogo-socio">ID del socio</label>
+        <input id="dialogo-socio" type="text" placeholder="Ejemplo: FIT-C001"
+               autocomplete="off" autocapitalize="characters">
+      </div>
+      <div class="fila">
+        <!-- value="no" / value="si" nos dice qué botón se presionó. -->
+        <button value="no" class="btn btn-secundario">No, regresar</button>
+        <button value="si" id="dialogo-si" class="btn btn-principal">Sí, confirmar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- El "cerebro" se carga al final, cuando todo el HTML ya existe. -->
+  <script src="app.js"></script>
+</body>
+</html>
