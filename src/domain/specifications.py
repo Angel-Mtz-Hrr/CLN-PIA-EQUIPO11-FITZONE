@@ -63,13 +63,23 @@ class MembresiaVigenteSpec(Specification):
 
 
 class ClaseIncluidaEnPlanSpec(Specification):
-    """BR-07: Solo se pueden reservar clases incluidas en el plan."""
+    """
+    BR-07: Solo se pueden reservar clases incluidas en el plan.
+
+    Recibe el nombre de la clase (ej. "Clase Mensual 01") y revisa si alguno de los
+    tipos que cubre el plan (ej. ["Mensual", "Anual"]) aparece en ese nombre.
+    La comparación ignora mayúsculas y espacios sobrantes.
+    """
 
     def __init__(self, tipo_clase: str):
         self.tipo_clase = tipo_clase
 
     def is_satisfied_by(self, plan: Any) -> bool:
-        return self.tipo_clase in plan.clases_incluidas
+        nombre = self.tipo_clase.strip().lower()
+        return any(
+            tipo.strip() and tipo.strip().lower() in nombre
+            for tipo in plan.clases_incluidas
+        )
 
 
 class CapacidadDisponibleSpec(Specification):

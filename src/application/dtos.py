@@ -411,3 +411,33 @@ class MembresiaDTO(BaseModel):
             ]
         }
     )
+
+
+# ==========================================
+# CIERRE DE CLASE / NO-SHOWS (BR-08, BR-09)
+# ==========================================
+class ComandoCerrarClase(BaseModel):
+    """Solicitud para cerrar una clase ya terminada y registrar los no-shows."""
+
+    actor_id: str = Field(
+        ...,
+        description="Identificador de quien ejecuta el cierre.",
+        examples=["FIT-A001"],
+    )
+    actor_rol: Rol = Field(
+        ...,
+        description="Rol de quien ejecuta el cierre (Administrador o Sistema).",
+        examples=["Administrador"],
+    )
+
+
+class RespuestaCierreDTO(BaseModel):
+    """Resultado del cierre de una clase."""
+
+    mensaje: str = Field(..., examples=["Clase cerrada. No-shows registrados: 2."])
+    clase_id: str = Field(..., examples=["FIT-P001"])
+    no_shows_registrados: int = Field(
+        ...,
+        description="Reservas activas sin asistencia que pasaron a NO_SHOW (sin sanción, BR-09).",
+        examples=[2],
+    )

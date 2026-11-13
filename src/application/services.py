@@ -11,9 +11,10 @@ from src.domain.value_objects import (
     VigenciaDeMembresia,
     PlanId,
     EstadoDeReserva,
+    Rol,
 )
-from src.domain.entities import ClaseGrupal, Membresia, Reserva
-from src.domain.specifications import MembresiaVigenteSpec
+from src.domain.entities import ClaseGrupal, Membresia, Reserva, PlanDeMembresia
+from src.domain.specifications import MembresiaVigenteSpec, ClaseIncluidaEnPlanSpec
 from src.application.dtos import (
     ComandoReservar,
     ComandoCancelar,
@@ -24,7 +25,12 @@ from src.application.dtos import (
     MembresiaDTO,
 )
 from src.application.unit_of_work import UnitOfWork
-from src.infrastructure.orm import ClaseGrupalORM, ReservaORM, MembresiaORM
+from src.infrastructure.orm import (
+    ClaseGrupalORM,
+    ReservaORM,
+    MembresiaORM,
+    PlanDeMembresiaORM,
+)
 
 
 # ==========================================
@@ -49,6 +55,30 @@ class ServicioDeReservas:
             clase._reservas.append(reserva_entidad)
         return clase
 
+    @staticmethod
+    def _traducir_membresia(membresia_orm: MembresiaORM) -> Membresia:
+        """Convierte la fila de la base de datos en la entidad Membresia del dominio."""
+        return Membresia(
+            id=membresia_orm.id,
+            socio_id=SocioId(membresia_orm.socio_id),
+            plan_id=PlanId(membresia_orm.plan_id),
+            vigencia=VigenciaDeMembresia(
+                membresia_orm.inicio_vigencia, membresia_orm.fin_vigencia
+            ),
+            suspendida=membresia_orm.suspendida,
+        )
+
+    def _obtener_plan(self, plan_id: str) -> PlanDeMembresia:
+        """Busca el plan contratado y lo traduce al dominio (BR-07)."""
+        plan_orm = self.uow.db.get(PlanDeMembresiaORM, plan_id)
+        if not plan_orm:
+            raise ValueError(f"El plan '{plan_id}' de la membresía no existe.")
+        return PlanDeMembresia(
+            id=PlanId(plan_orm.id),
+            nombre=plan_orm.nombre,
+            clases_incluidas=[t.strip() for t in plan_orm.clases_incluidas.split(",")],
+        )
+
     def reservar_clase(self, comando: ComandoReservar) -> str:
         """CU-01: Proceso para apartar un lugar en una clase (BR-01, BR-05, BR-06)."""
         with self.uow:
@@ -65,22 +95,23 @@ class ServicioDeReservas:
 
             # 2. Traducir ORM a Entidades Puras
             clase = self._reconstruir_agregado_clase(clase_orm)
-
-            membresia = Membresia(
-                id=membresia_orm.id,
-                socio_id=SocioId(membresia_orm.socio_id),
-                plan_id=PlanId(membresia_orm.plan_id),
-                vigencia=VigenciaDeMembresia(
-                    membresia_orm.inicio_vigencia, membresia_orm.fin_vigencia
-                ),
-                suspendida=membresia_orm.suspendida,
-            )
+            membresia = self._traducir_membresia(membresia_orm)
 
             # 3. Validar Reglas de Negocio mediante Specifications (BR-06)
             spec_vigencia = MembresiaVigenteSpec(fecha_actual=datetime.now())
             if not spec_vigencia.is_satisfied_by(membresia):
                 raise ValueError(
                     "La membresía del socio no está vigente o está suspendida."
+                )
+
+            # 3b. BR-07: la clase debe estar incluida en el plan contratado
+            plan = self._obtener_plan(membresia_orm.plan_id)
+            spec_plan = ClaseIncluidaEnPlanSpec(tipo_clase=clase_orm.nombre)
+            if not spec_plan.is_satisfied_by(plan):
+                raise ValueError(
+                    f"La clase '{clase_orm.nombre}' no está incluida en tu plan "
+                    f"'{plan.nombre}'. Puedes actualizar tu plan en recepción "
+                    "para tener acceso a ella."
                 )
 
             # 4. Ejecutar la acción en el Dominio (protege cupo BR-05 y duplicidad)
@@ -141,6 +172,21 @@ class ServicioDeReservas:
             if not clase_orm:
                 raise ValueError("La clase solicitada no existe.")
 
+            # BR-06: una membresía vencida o suspendida tampoco puede entrar al gimnasio
+            membresia_orm = self.uow.membresias.obtener_membresia_de_socio(
+                comando.socio_id
+            )
+            if not membresia_orm:
+                raise ValueError("El socio no tiene ninguna membresía registrada.")
+            membresia = self._traducir_membresia(membresia_orm)
+            if not MembresiaVigenteSpec(fecha_actual=datetime.now()).is_satisfied_by(
+                membresia
+            ):
+                raise ValueError(
+                    "La membresía del socio no está vigente o está suspendida. "
+                    "No se puede permitir el acceso."
+                )
+
             clase = self._reconstruir_agregado_clase(clase_orm)
             actor = Actor(id=comando.actor_id, rol=comando.actor_rol)
 
@@ -167,8 +213,16 @@ class ServicioDeCierreDeClase:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
-    def registrar_no_shows(self, clase_id: str):
-        """CU-05: El sistema barre la clase al terminar y penaliza a los ausentes."""
+    def registrar_no_shows(self, clase_id: str, actor: Actor) -> int:
+        """
+        CU-05 (BR-08): Al terminar la clase, toda reserva ACTIVA (no cancelada y sin
+        asistencia) se registra como NO_SHOW. No se aplica ninguna sanción (BR-09).
+        Devuelve cuántos no-shows se registraron.
+        """
+        if actor.rol not in [Rol.ADMINISTRADOR, Rol.SISTEMA]:
+            raise PermissionError(
+                "Solo el administrador o el sistema pueden cerrar una clase."
+            )
         with self.uow:
             clase_orm = self.uow.clases.obtener_por_id(clase_id)
             if not clase_orm:
@@ -187,11 +241,14 @@ class ServicioDeCierreDeClase:
 
             clase.procesar_cierre_de_clase()
 
+            no_shows = 0
             for r in clase_orm.reservas:
                 if r.estado == EstadoDeReserva.ACTIVA:
                     r.estado = EstadoDeReserva.NO_SHOW
+                    no_shows += 1
 
             self.uow.confirmar(agregado=clase)
+            return no_shows
 
 
 # ==========================================

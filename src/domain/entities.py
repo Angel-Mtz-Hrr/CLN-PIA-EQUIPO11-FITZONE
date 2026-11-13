@@ -103,6 +103,10 @@ class ClaseGrupal:
         if actor.rol not in [Rol.SOCIO, Rol.RECEPCION]:
             raise PermissionError("Solo el socio o recepción pueden realizar reservas.")
 
+        # BR-03: reservar "a nombre de otro socio" es tarea de Recepción, no de otro socio.
+        if actor.rol == Rol.SOCIO and actor.id != socio_id:
+            raise PermissionError("Un socio solo puede reservar a su propio nombre.")
+
         if any(
             r.socio_id == socio_id and r.estado == EstadoDeReserva.ACTIVA
             for r in self._reservas
@@ -116,6 +120,14 @@ class ClaseGrupal:
         )
 
     def cancelar_reserva(self, socio_id: SocioId, actor: Actor):
+        # BR-03: solo el propio socio o Recepción (a nombre del socio) pueden cancelar.
+        if actor.rol not in [Rol.SOCIO, Rol.RECEPCION]:
+            raise PermissionError(
+                "Solo el socio o recepción pueden cancelar reservaciones."
+            )
+        if actor.rol == Rol.SOCIO and actor.id != socio_id:
+            raise PermissionError("Un socio solo puede cancelar sus propias reservas.")
+
         reserva = next(
             (
                 r

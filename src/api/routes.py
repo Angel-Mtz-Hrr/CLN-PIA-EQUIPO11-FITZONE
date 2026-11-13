@@ -5,8 +5,12 @@ from typing import List
 # Importamos nuestras herramientas
 from src.infrastructure.database import get_db
 from src.application.unit_of_work import UnitOfWork
-from src.application.services import ServicioDeReservas, ServicioDeConsultas
-from src.domain.value_objects import EstadoDeReserva, Rol
+from src.application.services import (
+    ServicioDeReservas,
+    ServicioDeConsultas,
+    ServicioDeCierreDeClase,
+)
+from src.domain.value_objects import EstadoDeReserva, Rol, Actor
 from src.application.dtos import (
     ComandoReservar,
     ComandoCancelar,
@@ -18,6 +22,8 @@ from src.application.dtos import (
     ReservaDTO,
     MembresiaDTO,
     ErrorRespuestaDTO,
+    ComandoCerrarClase,
+    RespuestaCierreDTO,
 )
 
 router = APIRouter(tags=["Gimnasio FitZone"])
@@ -92,6 +98,10 @@ def get_servicio_reservas(db: Session = Depends(get_db)):
 
 def get_servicio_consultas(db: Session = Depends(get_db)):
     return ServicioDeConsultas(db)
+
+
+def get_servicio_cierre(db: Session = Depends(get_db)):
+    return ServicioDeCierreDeClase(UnitOfWork(db))
 
 
 # ==========================================
@@ -334,4 +344,45 @@ def registrar_asistencia(
         "clase_id": comando.clase_id,
         "socio_id": comando.socio_id,
         "nuevo_estado": EstadoDeReserva.ASISTIDA,
+    }
+
+
+@router.post(
+    "/clases/{clase_id}/cierre",
+    response_model=RespuestaCierreDTO,
+    status_code=status.HTTP_200_OK,
+    summary="Cerrar una clase terminada y registrar no-shows",
+    response_description="Cantidad de reservas activas que pasaron a NO_SHOW.",
+    responses=RESPUESTAS_ERROR_NEGOCIO,
+)
+def cerrar_clase(
+    clase_id: str = Path(
+        ...,
+        description="Identificador de la clase a cerrar (ej. FIT-P001)",
+        examples=["FIT-P001"],
+    ),
+    comando: ComandoCerrarClase = Body(
+        ...,
+        openapi_examples={
+            "cierre_admin": {
+                "summary": "Cierre ejecutado por el Administrador",
+                "value": {"actor_id": "FIT-A001", "actor_rol": "Administrador"},
+            }
+        },
+    ),
+    servicio: ServicioDeCierreDeClase = Depends(get_servicio_cierre),
+):
+    """
+    BR-08: Al terminar la clase, toda reserva activa que no fue cancelada y cuyo socio
+    no asistió se registra como **NO_SHOW**.
+    - Solo `Administrador` o `Sistema` pueden ejecutarlo.
+    - No se puede cerrar una clase que todavía no termina.
+    - BR-09: el no-show solo se registra; no genera sanción.
+    """
+    actor = Actor(id=comando.actor_id, rol=comando.actor_rol)
+    no_shows = servicio.registrar_no_shows(clase_id, actor)
+    return {
+        "mensaje": f"Clase cerrada. No-shows registrados: {no_shows}.",
+        "clase_id": clase_id,
+        "no_shows_registrados": no_shows,
     }
